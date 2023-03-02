@@ -84,7 +84,9 @@ export class Scanner {
                 this.addToken(this.match("=") ? TokenType.GREATER_EQUAL : TokenType.GREATER);
                 break;     
             case "/":
-                if (this.match("/")) {
+                if (this.match("*")) { 
+                    this.advanceBlockComment();
+                } else if (this.match("/")) {
                     while (this.peek() != "\n" && !this.isAtEnd()) this.advance();
                 } else {
                     this.addToken(TokenType.SLASH);
@@ -119,6 +121,25 @@ export class Scanner {
 
     private advance(): string {
         return this.source.charAt(this.current++)
+    }
+
+    private advanceBlockComment(): void {
+        this.advance();                                         //eat '*'
+        while (true) {
+            if (this.isAtEnd()) {
+                Lox.error(this.line, "Unclosed block comment.");
+                return;
+            }
+            const c = this.advance();
+            if (c == "\n") {
+                this.line++;                                    //increment line if newline seen
+            } else if (c == "*" && this.peek() == "/") {
+                this.advance();                                 //eat '/'
+                break;
+            } else if (c == "/" && this.peek() == "*") {
+                this.advanceBlockComment();                     //go deeper if another block seen
+            }
+        }
     }
 
     private isAtEnd(): boolean {
