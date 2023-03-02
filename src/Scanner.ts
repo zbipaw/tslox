@@ -128,7 +128,7 @@ export class Scanner {
         while (true) {
             if (this.isAtEnd()) {
                 Lox.error(this.line, "Unclosed block comment.");
-                return;
+                break;
             }
             const c = this.advance();
             if (c == "\n") {
