@@ -1,4 +1,4 @@
-import { Lox } from "./Lox";
+import { ScanError } from "./Error";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType"
 
@@ -107,8 +107,7 @@ export class Scanner {
                 } else if (this.isAlpha(c)) {
                     this.identifier();
                 } else {
-                //TODO: error handler
-                    Lox.error(this.line, "Unexpected character."); break;
+                    new ScanError(this.line, "Unexpected character."); break;
                 }
         }
     }
@@ -127,8 +126,7 @@ export class Scanner {
         this.advance();                                         //eat '*'
         while (true) {
             if (this.isAtEnd()) {
-                Lox.error(this.line, "Unclosed block comment.");
-                break;
+                throw new ScanError(this.line, "Unclosed block comment.");
             }
             const c = this.advance();
             if (c == "\n") {
@@ -200,8 +198,7 @@ export class Scanner {
             this.advance()
         }
         if (this.isAtEnd()) {
-            Lox.error(this.line, "Unterminated string.");
-            return;
+            throw new ScanError(this.line, "Unterminated string.");
         }
         this.advance();
         const value = this.source.substring(this.start + 1, this.current - 1);

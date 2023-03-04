@@ -2,8 +2,9 @@ import { readFileSync } from "fs";
 import { mainModule } from "process";
 import { createInterface } from "readline";
 
+import { Parser } from "./Parser";
 import { Scanner } from "./Scanner"
-import { Token } from "./Token";
+import { AstPrinter } from "./tool/AstPrinter";
 
 export class Lox {
     static hadError = false;
@@ -61,19 +62,11 @@ export class Lox {
     private static run(source: string): void {
         const scanner = new Scanner(source);
         const tokens = scanner.scanTokens();
-
-        for (let t of tokens) {
-            console.log(t);
-        }
-    }
-
-    static error(line: number, message: string): void {
-        this.report(line, "", message);
-    }
-
-    private static report(line: number, where: string, message: string): void {
-        console.log("[line " + line + "] Error" + where + ": " + message);
-        this.hadError = true;
+        const parser = new Parser(tokens);
+        const expression = parser.parse();
+        
+        if (this.hadError) return;
+        console.log(new AstPrinter().print(expression));
     }
 }
 
