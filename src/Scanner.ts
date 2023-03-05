@@ -1,5 +1,5 @@
 import { ScanError } from "./Error";
-import { Token } from "./Token";
+import { Literal, Token } from "./Token";
 import { TokenType } from "./TokenType"
 
 const keywords: Map<string, TokenType> = new Map([
@@ -112,7 +112,7 @@ export class Scanner {
         }
     }
 
-    private addToken(type: TokenType, literal: Object | null = null): Token[] {
+    private addToken(type: TokenType, literal: Literal = null): Token[] {
         const value = this.source.substring(this.start, this.current);
         this.tokens.push(new Token(type, value, literal, this.line));
         return this.tokens;

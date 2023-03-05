@@ -82,7 +82,7 @@ export class Parser {
         if (this.match(TokenType.TRUE)) return new LiteralExpr(true);
         if (this.match(TokenType.NIL)) return new LiteralExpr(null);
         if (this.match(TokenType.NUMBER, TokenType.STRING)) {
-            return new LiteralExpr(this.previous().literal);
+            return new LiteralExpr(this.previous().literal ?? null);
         }
         if (this.match(TokenType.L_PAREN)) {
             let expr = this.expression();

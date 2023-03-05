@@ -49,7 +49,6 @@ export class Lox {
                     console.error(error.message)
                 }
             }
-            console.log()
             rl.prompt();
         });
         rl.on("close", () => {

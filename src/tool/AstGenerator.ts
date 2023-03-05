@@ -1,5 +1,4 @@
 import { writeFileSync } from "fs";
-import { mainModule } from "process";
 
 class AstGenerator {
     public static main(): void {
@@ -13,10 +12,10 @@ class AstGenerator {
         this.defineAst(outputDir, "Expr", [
             "Binary   - left: Expr, operator: Token, right: Expr",
             "Grouping - expression: Expr",
-            "Literal  - value: Object | null",
+            "Literal  - value: Literal",
             "Unary    - operator: Token, right: Expr",
         ], [
-            "import { Token } from '../Token';"
+            "import { Literal, Token } from '../Token';"
         ]);
     }
 
