@@ -21,3 +21,14 @@ export class ParseError implements Error {
         return `${this.name}: ${this.message} @ ${this.token.line}`
     }
 }
+
+export class RuntimeError implements Error {
+    constructor(
+        public readonly token: Token,
+        public readonly message: string,
+        public readonly name: string = "Runtime error",
+    ) { }
+    public toString(): string {
+        return `${this.name}: ${this.message} @ ${this.token.line}`
+    }
+}

@@ -1,4 +1,3 @@
-import { consumers } from "stream";
 import { Expr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr } from "./gen/Expr";
 import { ParseError } from "./Error";
 import { Token } from "./Token";

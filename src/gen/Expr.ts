@@ -43,7 +43,7 @@ export class LiteralExpr implements Expr {
     value: Literal;
 
   constructor(value: Literal) {
-    this.value = value;
+        this.value = value;
     }
 
     accept<T>(visitor: ExprVisitor<T>): T {
