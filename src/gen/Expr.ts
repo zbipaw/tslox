@@ -5,6 +5,7 @@ export interface ExprVisitor<T> {
     visitGroupingExpr: (expr: GroupingExpr) => T;
     visitLiteralExpr: (expr: LiteralExpr) => T;
     visitUnaryExpr: (expr: UnaryExpr) => T;
+    visitVariableExpr: (expr: VariableExpr) => T;
 }
 
 export abstract class Expr {
@@ -43,7 +44,7 @@ export class LiteralExpr implements Expr {
     value: Literal;
 
   constructor(value: Literal) {
-        this.value = value;
+    this.value = value;
     }
 
     accept<T>(visitor: ExprVisitor<T>): T {
@@ -65,3 +66,14 @@ export class UnaryExpr implements Expr {
     }
 }
 
+export class VariableExpr implements Expr {
+    name: Token;
+
+  constructor(name: Token) {
+    this.name = name;
+    }
+
+    accept<T>(visitor: ExprVisitor<T>): T {
+        return visitor.visitVariableExpr(this);
+    }
+}

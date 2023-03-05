@@ -1,15 +1,22 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr 
 } from "./gen/Expr";
+import { 
+    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt
+} from "./gen/Stmt";
 import { Literal, Token } from "./Token";
 import { TokenType } from "./TokenType";
 import { RuntimeError } from "./Error";
+import { Environment } from "./Environment";
 
-export class Interpreter implements ExprVisitor<Literal> {
-    interpret(expr: Expr) {
+export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
+    private environment = new Environment();
+
+    interpret(statements: Stmt[]): void {
         try {
-            const value = this.evaluate(expr);
-            console.log(this.stringify(value));
+            for(let stmt of statements) {
+                this.execute(stmt);
+            }
         } catch (error) {
             if (error instanceof RuntimeError)
                 console.error(error.message);
@@ -73,6 +80,31 @@ export class Interpreter implements ExprVisitor<Literal> {
             case TokenType.EQUAL_EQUAL: return this.isEqual(left, right);           
         }
         throw new RuntimeError(expr.operator, "Unknown token type used as binary operator.")
+    }
+
+    visitVariableExpr(expr: VariableExpr): Literal {
+        return this.environment.get(expr.name);
+    }
+
+    visitExpressionStmt(stmt: ExpressionStmt): void {
+        this.evaluate(stmt.expression);
+    }
+
+    visitPrintStmt(stmt: PrintStmt): void {
+        const value = this.evaluate(stmt.expression);
+        console.log(this.stringify(value));
+    }
+
+    visitVarStmt(stmt: VarStmt): void {
+        let value = null;
+        if (stmt.initializer != null) {
+            value = this.evaluate(stmt.initializer);
+        }
+        this.environment.define(stmt.name.lexeme, value);
+    }
+
+    private execute(stmt: Stmt): void {
+        return stmt.accept(this);
     }
 
     private evaluate(expr: Expr): Literal {

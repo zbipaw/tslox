@@ -14,7 +14,16 @@ class AstGenerator {
             "Grouping - expression: Expr",
             "Literal  - value: Literal",
             "Unary    - operator: Token, right: Expr",
+            "Variable - name: Token",
         ], [
+            "import { Literal, Token } from '../Token';"
+        ]);
+        this.defineAst(outputDir, "Stmt", [
+            "Expression - expression: Expr",
+            "Print      - expression: Expr",
+            "Var        - name: Token, initializer: Expr | null",
+        ], [
+            "import { Expr } from './Expr';",
             "import { Literal, Token } from '../Token';"
         ]);
     }

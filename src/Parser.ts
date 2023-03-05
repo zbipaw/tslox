@@ -1,4 +1,5 @@
-import { Expr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr } from "./gen/Expr";
+import { Expr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr } from "./gen/Expr";
+import { Stmt, ExpressionStmt, PrintStmt, VarStmt } from "./gen/Stmt";
 import { ParseError } from "./Error";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType";
@@ -11,16 +12,12 @@ export class Parser {
         this.tokens = tokens;
     }
 
-    parse(): Expr {
-        try {
-            return this.expression();
-        } catch (error) {
-            if (error instanceof ParseError) {
-                throw new ParseError(this.peek(), "Expect any expression.")
-            } else {
-                throw new Error();
-            }
+    parse(): Stmt[] {
+        const statements: Stmt[] = [];
+        while(!this.isAtEnd()) {
+            statements.push(this.declaration())
         }
+        return statements;
     }
 
     private expression(): Expr {
@@ -82,6 +79,9 @@ export class Parser {
         if (this.match(TokenType.NIL)) return new LiteralExpr(null);
         if (this.match(TokenType.NUMBER, TokenType.STRING)) {
             return new LiteralExpr(this.previous().literal ?? null);
+        }
+        if (this.match(TokenType.IDENTIFIER)) {
+            return new VariableExpr(this.previous());
         }
         if (this.match(TokenType.L_PAREN)) {
             let expr = this.expression();
@@ -145,5 +145,42 @@ export class Parser {
           }
           this.advance();
         }
+    }
+
+    private printStatement(): Stmt {
+        const value = this.expression();
+        this.consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        return new PrintStmt(value);
+    }
+
+    private expressionStatement(): Stmt {
+        const expr = this.expression();
+        this.consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+        return new ExpressionStmt(expr);
+    }
+
+    private statement(): Stmt {
+        if (this.match(TokenType.PRINT)) return this.printStatement();
+        return this.expressionStatement();
+    }
+
+    private declaration(): Stmt {
+        try {
+            if (this.match(TokenType.VAR)) return this.varDeclaration();
+            return this.statement();
+        } catch (error: any) {
+            this.synchronize();
+            throw new ParseError(this.peek(), error.message);
+        }
+    }
+
+    private varDeclaration(): Stmt {
+        const name = this.consume(TokenType.IDENTIFIER, "Expect variable name.");
+        let initializer = null;
+        if (this.match(TokenType.EQUAL)) {
+            initializer = this.expression();
+        }
+        this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+        return new VarStmt(name, initializer);
     }
 }
