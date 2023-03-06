@@ -1,13 +1,14 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr 
 } from "./gen/Expr";
 import { 
-    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt
+    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt
 } from "./gen/Stmt";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType";
 import { RuntimeError } from "./Error";
 import { Environment } from "./Environment";
+import exp from "constants";
 
 export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void> {
     private environment = new Environment();
@@ -92,12 +93,30 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         return value;
     }
 
+    visitLogicalExpr(expr: LogicalExpr) {
+        const left = this.evaluate(expr.left);
+        if (expr.operator.type === TokenType.OR) {
+            if (this.isTruthy(left)) return left;
+        } else {
+            if (!this.isTruthy(left)) return left;
+        }
+        return this.evaluate(expr.right);
+    }
+
     visitBlockStmt(stmt: BlockStmt): void {
         this.executeBlock(stmt.statements, new Environment(this.environment));
     }
 
     visitExpressionStmt(stmt: ExpressionStmt): void {
         this.evaluate(stmt.expression);
+    }
+
+    visitIfStmt(stmt: IfStmt): void {
+        if (this.isTruthy(this.evaluate(stmt.condition))) {
+            this.execute(stmt.thenBranch);
+        } else if (stmt.elseBranch !== null) {
+            this.execute(stmt.elseBranch);
+        }
     }
 
     visitPrintStmt(stmt: PrintStmt): void {
@@ -113,11 +132,17 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         this.environment.define(stmt.name.lexeme, value);
     }
 
+    visitWhileStmt(stmt: WhileStmt): void {
+        while(this.isTruthy(this.evaluate(stmt.condition))) {
+            this.execute(stmt.body);
+        }
+    }
+
     private execute(stmt: Stmt): void {
         return stmt.accept(this);
     }
 
-    private executeBlock(statements: Stmt[], environment: Environment) {
+    private executeBlock(statements: Stmt[], environment: Environment): void {
         const previous = this.environment;
         try {
             this.environment = environment;

@@ -14,6 +14,7 @@ class AstGenerator {
             "Binary   - left: Expr, operator: Token, right: Expr",
             "Grouping - expression: Expr",
             "Literal  - value: Object | null",
+            "Logical  - left: Expr, operator: Token, right: Expr",
             "Unary    - operator: Token, right: Expr",
             "Variable - name: Token",
         ], [
@@ -22,8 +23,10 @@ class AstGenerator {
         this.defineAst(outputDir, "Stmt", [
             "Block      - statements: Stmt[]",
             "Expression - expression: Expr",
+            "If         - condition: Expr, thenBranch: Stmt, elseBranch: Stmt | null",
             "Print      - expression: Expr",
             "Var        - name: Token, initializer: Expr | null",
+            "While      - condition: Expr, body: Stmt",
         ], [
             "import { Expr } from './Expr';",
             "import { Token } from '../Token';"

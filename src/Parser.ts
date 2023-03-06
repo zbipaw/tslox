@@ -1,8 +1,8 @@
 import { 
-    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr 
+    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr 
 } from "./gen/Expr";
 import { 
-    Stmt, ExpressionStmt, PrintStmt, VarStmt 
+    Stmt, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt 
 } from "./gen/Stmt";
 import { ParseError } from "./Error";
 import { Token } from "./Token";
@@ -163,7 +163,7 @@ export class Parser {
         return new ExpressionStmt(expr);
     }
 
-    private block(): Stmt[] {
+    private blockStatement(): Stmt[] {
         const statements = [];
         while(!this.check(TokenType.R_BRACE) && !this.isAtEnd()) {
             statements.push(this.declaration());
@@ -172,8 +172,67 @@ export class Parser {
         return statements;
     }
 
+    private ifStatement(): Stmt {
+        this.consume(TokenType.L_PAREN, "Expect '(' after 'if'.");
+        const condition = this.expression();
+        this.consume(TokenType.R_PAREN, "Expect ')' after 'if' condition.");
+        const thenBranch = this.statement();
+        let elseBranch = null;
+        if (this.match(TokenType.ELSE)) {
+            elseBranch = this.statement();
+        }
+        return new IfStmt(condition, thenBranch, elseBranch);
+    }
+
+    private whileStatement(): Stmt {
+        this.consume(TokenType.L_PAREN, "Expect '(' after 'while'.");
+        const condition = this.expression();
+        this.consume(TokenType.R_PAREN, "Expect ')' after condition.");
+        const body = this.statement();
+        return new WhileStmt(condition, body);
+    }
+
+    private forStatement(): Stmt {
+        this.consume(TokenType.L_PAREN, "Expect '(' after 'for'.");
+        let initializer;
+        if (this.match(TokenType.SEMICOLON)) {
+            initializer = null;
+        } else if (this.match(TokenType.VAR)) {
+            initializer = this.varDeclaration();
+        } else {
+            initializer = this.expressionStatement();
+        }
+        let condition = null;
+        if (!this.check(TokenType.SEMICOLON)) {
+            condition = this.expression();
+        }
+        this.consume(TokenType.SEMICOLON, "Expect ';' after loop condition.");
+        let increment = null;
+        if (!this.check(TokenType.R_PAREN)) {
+            increment = this.expression();
+        }
+        this.consume(TokenType.R_PAREN, "Expect ')' after for clauses.");
+        let body = this.statement();
+
+        if (increment !== null) {
+            body = new BlockStmt([
+                body, new ExpressionStmt(increment)
+            ])
+        }
+        if (condition == null) condition = new LiteralExpr(true);
+        body = new WhileStmt(condition, body);
+        if (initializer != null) {
+            body = new BlockStmt([initializer, body])
+        }
+        return body;
+    }
+
     private statement(): Stmt {
+        if (this.match(TokenType.FOR)) return this.forStatement();
+        if (this.match(TokenType.IF)) return this.ifStatement();
         if (this.match(TokenType.PRINT)) return this.printStatement();
+        if (this.match(TokenType.WHILE)) return this.whileStatement();
+        if (this.match(TokenType.L_BRACE)) return new BlockStmt(this.blockStatement());
         return this.expressionStatement();
     }
 
@@ -198,7 +257,7 @@ export class Parser {
     }
 
     private assignment(): Expr {
-        const expr = this.equality();
+        const expr = this.or();
         if (this.match(TokenType.EQUAL)) {
             const equals = this.previous();
             const value = this.assignment();
@@ -207,6 +266,26 @@ export class Parser {
                 return new AssignExpr(name, value);
             }
             throw new ParseError(equals, "Invalid assignment target.");
+        }
+        return expr;
+    }
+
+    private or(): Expr {
+        let expr = this.and();
+        while (this.match(TokenType.OR)) {
+            const operator = this.previous();
+            const right = this.and();
+            expr = new LogicalExpr(expr, operator, right);
+        }
+        return expr;
+    }
+
+    private and(): Expr {
+        let expr = this.equality();
+        while (this.match(TokenType.AND)) {
+            const operator = this.previous();
+            const right = this.equality();
+            expr = new LogicalExpr(expr, operator, right);
         }
         return expr;
     }

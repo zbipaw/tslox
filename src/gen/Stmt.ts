@@ -4,8 +4,10 @@ import { Token } from '../Token';
 export interface StmtVisitor<T> {
     visitBlockStmt: (stmt: BlockStmt) => T;
     visitExpressionStmt: (stmt: ExpressionStmt) => T;
+    visitIfStmt: (stmt: IfStmt) => T;
     visitPrintStmt: (stmt: PrintStmt) => T;
     visitVarStmt: (stmt: VarStmt) => T;
+    visitWhileStmt: (stmt: WhileStmt) => T;
 }
 
 export abstract class Stmt {
@@ -34,6 +36,21 @@ export class ExpressionStmt implements Stmt {
         return visitor.visitExpressionStmt(this);
     }
 }
+export class IfStmt implements Stmt {
+    condition: Expr;
+    thenBranch: Stmt;
+    elseBranch: Stmt | null;
+
+  constructor(condition: Expr, thenBranch: Stmt, elseBranch: Stmt | null) {
+    this.condition = condition;
+    this.thenBranch = thenBranch;
+    this.elseBranch = elseBranch;
+    }
+
+    accept<T>(visitor: StmtVisitor<T>): T {
+        return visitor.visitIfStmt(this);
+    }
+}
 export class PrintStmt implements Stmt {
     expression: Expr;
 
@@ -56,5 +73,18 @@ export class VarStmt implements Stmt {
 
     accept<T>(visitor: StmtVisitor<T>): T {
         return visitor.visitVarStmt(this);
+    }
+}
+export class WhileStmt implements Stmt {
+    condition: Expr;
+    body: Stmt;
+
+  constructor(condition: Expr, body: Stmt) {
+    this.condition = condition;
+    this.body = body;
+    }
+
+    accept<T>(visitor: StmtVisitor<T>): T {
+        return visitor.visitWhileStmt(this);
     }
 }
