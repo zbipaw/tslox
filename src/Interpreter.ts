@@ -2,7 +2,7 @@ import {
     Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr 
 } from "./gen/Expr";
 import { 
-    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt
+    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt
 } from "./gen/Stmt";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType";
@@ -92,6 +92,10 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         return value;
     }
 
+    visitBlockStmt(stmt: BlockStmt): void {
+        this.executeBlock(stmt.statements, new Environment(this.environment));
+    }
+
     visitExpressionStmt(stmt: ExpressionStmt): void {
         this.evaluate(stmt.expression);
     }
@@ -111,6 +115,18 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
 
     private execute(stmt: Stmt): void {
         return stmt.accept(this);
+    }
+
+    private executeBlock(statements: Stmt[], environment: Environment) {
+        const previous = this.environment;
+        try {
+            this.environment = environment;
+            for (let stmt of statements) {
+                this.execute(stmt);
+            }
+        } finally {
+            this.environment = previous;
+        }
     }
 
     private evaluate(expr: Expr): any {

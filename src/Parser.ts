@@ -163,6 +163,15 @@ export class Parser {
         return new ExpressionStmt(expr);
     }
 
+    private block(): Stmt[] {
+        const statements = [];
+        while(!this.check(TokenType.R_BRACE) && !this.isAtEnd()) {
+            statements.push(this.declaration());
+        }
+        this.consume(TokenType.R_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
     private statement(): Stmt {
         if (this.match(TokenType.PRINT)) return this.printStatement();
         return this.expressionStatement();
