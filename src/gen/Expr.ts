@@ -1,6 +1,7 @@
 import { Literal, Token } from '../Token';
 
 export interface ExprVisitor<T> {
+    visitAssignExpr: (expr: AssignExpr) => T;
     visitBinaryExpr: (expr: BinaryExpr) => T;
     visitGroupingExpr: (expr: GroupingExpr) => T;
     visitLiteralExpr: (expr: LiteralExpr) => T;
@@ -12,6 +13,19 @@ export abstract class Expr {
     abstract accept: <T>(visitor: ExprVisitor<T>) => T;
 }
 
+export class AssignExpr implements Expr {
+    name: Token;
+    value: Expr;
+
+  constructor(name: Token, value: Expr) {
+    this.name = name;
+    this.value = value;
+    }
+
+    accept<T>(visitor: ExprVisitor<T>): T {
+        return visitor.visitAssignExpr(this);
+    }
+}
 export class BinaryExpr implements Expr {
     left: Expr;
     operator: Token;
@@ -27,7 +41,6 @@ export class BinaryExpr implements Expr {
         return visitor.visitBinaryExpr(this);
     }
 }
-
 export class GroupingExpr implements Expr {
     expression: Expr;
 
@@ -39,7 +52,6 @@ export class GroupingExpr implements Expr {
         return visitor.visitGroupingExpr(this);
     }
 }
-
 export class LiteralExpr implements Expr {
     value: Literal;
 
@@ -51,7 +63,6 @@ export class LiteralExpr implements Expr {
         return visitor.visitLiteralExpr(this);
     }
 }
-
 export class UnaryExpr implements Expr {
     operator: Token;
     right: Expr;
@@ -65,7 +76,6 @@ export class UnaryExpr implements Expr {
         return visitor.visitUnaryExpr(this);
     }
 }
-
 export class VariableExpr implements Expr {
     name: Token;
 

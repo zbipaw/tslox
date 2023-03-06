@@ -22,7 +22,6 @@ export class ExpressionStmt implements Stmt {
         return visitor.visitExpressionStmt(this);
     }
 }
-
 export class PrintStmt implements Stmt {
     expression: Expr;
 
@@ -34,7 +33,6 @@ export class PrintStmt implements Stmt {
         return visitor.visitPrintStmt(this);
     }
 }
-
 export class VarStmt implements Stmt {
     name: Token;
     initializer: Expr | null;

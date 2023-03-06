@@ -1,5 +1,5 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr 
 } from "./gen/Expr";
 import { 
     Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt
@@ -84,6 +84,12 @@ export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
 
     visitVariableExpr(expr: VariableExpr): Literal {
         return this.environment.get(expr.name);
+    }
+
+    visitAssignExpr(expr: AssignExpr): Literal {
+        const value = this.evaluate(expr.value);
+        this.environment.assign(expr.name, value);
+        return value;
     }
 
     visitExpressionStmt(stmt: ExpressionStmt): void {

@@ -10,6 +10,7 @@ class AstGenerator {
         const outputDir = args[0];
 
         this.defineAst(outputDir, "Expr", [
+            "Assign   - name: Token, value: Expr",
             "Binary   - left: Expr, operator: Token, right: Expr",
             "Grouping - expression: Expr",
             "Literal  - value: Literal",
@@ -74,7 +75,7 @@ class AstGenerator {
         content += `    accept<T>(visitor: ${baseName}Visitor<T>): T {\n`;
         content += `        return visitor.visit${className}${baseName}(this);\n`;
         content += `    }\n`;
-        content += '}\n\n';
+        content += '}\n';
         return content;
     }
 }

@@ -1,5 +1,9 @@
-import { Expr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr } from "./gen/Expr";
-import { Stmt, ExpressionStmt, PrintStmt, VarStmt } from "./gen/Stmt";
+import { 
+    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr 
+} from "./gen/Expr";
+import { 
+    Stmt, ExpressionStmt, PrintStmt, VarStmt 
+} from "./gen/Stmt";
 import { ParseError } from "./Error";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType";
@@ -21,7 +25,7 @@ export class Parser {
     }
 
     private expression(): Expr {
-        return this.equality();
+        return this.assignment();
     }
 
     private equality(): Expr {
@@ -182,5 +186,19 @@ export class Parser {
         }
         this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
         return new VarStmt(name, initializer);
+    }
+
+    private assignment(): Expr {
+        const expr = this.equality();
+        if (this.match(TokenType.EQUAL)) {
+            const equals = this.previous();
+            const value = this.assignment();
+            if (expr instanceof VariableExpr) {
+                const name = expr.name;
+                return new AssignExpr(name, value);
+            }
+            throw new ParseError(equals, "Invalid assignment target.");
+        }
+        return expr;
     }
 }
