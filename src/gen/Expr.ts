@@ -1,4 +1,4 @@
-import { Literal, Token } from '../Token';
+import { Token } from '../Token';
 
 export interface ExprVisitor<T> {
     visitAssignExpr: (expr: AssignExpr) => T;
@@ -53,9 +53,9 @@ export class GroupingExpr implements Expr {
     }
 }
 export class LiteralExpr implements Expr {
-    value: Literal;
+    value: Object | null;
 
-  constructor(value: Literal) {
+  constructor(value: Object | null) {
     this.value = value;
     }
 

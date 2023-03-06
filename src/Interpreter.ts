@@ -4,12 +4,12 @@ import {
 import { 
     Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt
 } from "./gen/Stmt";
-import { Literal, Token } from "./Token";
+import { Token } from "./Token";
 import { TokenType } from "./TokenType";
 import { RuntimeError } from "./Error";
 import { Environment } from "./Environment";
 
-export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
+export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void> {
     private environment = new Environment();
 
     interpret(statements: Stmt[]): void {
@@ -23,15 +23,15 @@ export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
         }
     }
 
-    visitLiteralExpr(expr: LiteralExpr): Literal {
+    visitLiteralExpr(expr: LiteralExpr) {
         return expr.value;
     }
 
-    visitGroupingExpr(expr: GroupingExpr): Literal {
+    visitGroupingExpr(expr: GroupingExpr) {
         return this.evaluate(expr.expression);
     }
 
-    visitUnaryExpr(expr: UnaryExpr): Literal {
+    visitUnaryExpr(expr: UnaryExpr) {
         const right = this.evaluate(expr.right);
         switch (expr.operator.type) {
             case TokenType.BANG:
@@ -43,7 +43,7 @@ export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
         throw new RuntimeError(expr.operator, "Unknown token type used as unary operator.")
     }
     
-    visitBinaryExpr(expr: BinaryExpr): Literal {
+    visitBinaryExpr(expr: BinaryExpr) {
         const left = this.evaluate(expr.left);
         const right = this.evaluate(expr.right);
         switch (expr.operator.type) {
@@ -82,11 +82,11 @@ export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
         throw new RuntimeError(expr.operator, "Unknown token type used as binary operator.")
     }
 
-    visitVariableExpr(expr: VariableExpr): Literal {
+    visitVariableExpr(expr: VariableExpr) {
         return this.environment.get(expr.name);
     }
 
-    visitAssignExpr(expr: AssignExpr): Literal {
+    visitAssignExpr(expr: AssignExpr) {
         const value = this.evaluate(expr.value);
         this.environment.assign(expr.name, value);
         return value;
@@ -113,29 +113,29 @@ export class Interpreter implements ExprVisitor<Literal>, StmtVisitor<void> {
         return stmt.accept(this);
     }
 
-    private evaluate(expr: Expr): Literal {
+    private evaluate(expr: Expr): any {
         return expr.accept(this);
     }
 
-    private isTruthy(value: Literal): boolean {
+    private isTruthy(value: Object): boolean {
         return !!value;
     }
 
-    private isEqual(a: Literal, b: Literal) {
+    private isEqual(a: Object, b: Object) {
         return a === b;
     }
 
-    private checkNumberOperand(operator: Token, operand: Literal): void {
+    private checkNumberOperand(operator: Token, operand: Object): void {
         if (typeof operand === "number") return;
         throw new RuntimeError(operator, "Operand must be a number.")
     }
 
-    private checkNumberOperands(operator: Token, left: Literal, right: Literal): void {
+    private checkNumberOperands(operator: Token, left: Object, right: Object): void {
         if (typeof left === "number" && typeof right === "number") return;
         throw new RuntimeError(operator, "Operand must be a numbers.")
     }
 
-    private stringify(lit: Literal): string {
+    private stringify(lit: Object): string {
         if (lit === null) return "nil";
         if (typeof lit === "number") {
             let text = lit.toString();

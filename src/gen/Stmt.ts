@@ -1,5 +1,5 @@
 import { Expr } from './Expr';
-import { Literal, Token } from '../Token';
+import {  Token } from '../Token';
 
 export interface StmtVisitor<T> {
     visitExpressionStmt: (stmt: ExpressionStmt) => T;
