@@ -1,17 +1,29 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr 
 } from "./gen/Expr";
 import { 
-    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt
+    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt
 } from "./gen/Stmt";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType";
 import { RuntimeError } from "./Error";
 import { Environment } from "./Environment";
-import exp from "constants";
+import { Callable } from "./Callable";
+import { Function } from "./Function";
+import { Return } from "./Return";
 
 export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void> {
-    private environment = new Environment();
+    globals: Environment = new Environment();
+    private environment = this.globals;
+
+    constructor() {
+        const clock: Callable & { toString: () => string } = {
+                arity: () => 0,
+                call: () => Date.now(),
+                toString: () => "<native function>",
+            };
+        this.globals.define("clock", clock);
+    }
 
     interpret(statements: Stmt[]): void {
         try {
@@ -103,12 +115,35 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         return this.evaluate(expr.right);
     }
 
+    visitCallExpr(expr: CallExpr) {
+        const callee = this.evaluate(expr.callee);
+        const args: Expr[] = [];
+        for (let arg of expr.args) {
+            args.push(this.evaluate(arg));
+        }
+        if (!this.isCallable(callee)) {
+            throw new RuntimeError(expr.paren, "Can call only function and classes.");
+        }
+        const func: Callable = callee;
+        if (args.length != func.arity()) {
+            throw new RuntimeError(
+                expr.paren, `Expected ${func.arity()} arguments but got ${args.length}.`
+            )
+        }
+        return func.call(this, args);
+    }
+
     visitBlockStmt(stmt: BlockStmt): void {
         this.executeBlock(stmt.statements, new Environment(this.environment));
     }
 
     visitExpressionStmt(stmt: ExpressionStmt): void {
         this.evaluate(stmt.expression);
+    }
+
+    visitFunctionStmt(stmt: FunctionStmt): void {
+        const func: Function = new Function(stmt, this.environment);
+        this.environment.define(stmt.name.lexeme, func);
     }
 
     visitIfStmt(stmt: IfStmt): void {
@@ -122,6 +157,14 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
     visitPrintStmt(stmt: PrintStmt): void {
         const value = this.evaluate(stmt.expression);
         console.log(this.stringify(value));
+    }
+
+    visitReturnStmt(stmt: ReturnStmt): void {
+        let value = null;
+        if (stmt.value !== null) {
+            value = this.evaluate(stmt.value);
+        }
+        throw new Return(value);    //control flow
     }
 
     visitVarStmt(stmt: VarStmt): void {
@@ -138,11 +181,11 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         }
     }
 
-    private execute(stmt: Stmt): void {
+    execute(stmt: Stmt): void {
         return stmt.accept(this);
     }
 
-    private executeBlock(statements: Stmt[], environment: Environment): void {
+    executeBlock(statements: Stmt[], environment: Environment): void {
         const previous = this.environment;
         try {
             this.environment = environment;
@@ -162,8 +205,12 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         return !!value;
     }
 
-    private isEqual(a: Object, b: Object) {
+    private isEqual(a: Object, b: Object): boolean {
         return a === b;
+    }
+
+    private isCallable(obj: any): boolean {
+        return obj.call !== undefined;
     }
 
     private checkNumberOperand(operator: Token, operand: Object): void {
