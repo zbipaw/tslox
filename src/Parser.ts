@@ -1,8 +1,8 @@
 import { 
-    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr, CallExpr 
+    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr, CallExpr, GetExpr, SetExpr 
 } from "./gen/Expr";
 import { 
-    Stmt, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt 
+    Stmt, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt, ClassStmt 
 } from "./gen/Stmt";
 import { ParseError } from "./Error";
 import { Token } from "./Token";
@@ -42,6 +42,9 @@ export class Parser {
             if (expr instanceof VariableExpr) {
                 const name = expr.name;
                 return new AssignExpr(name, value);
+            } else if (expr instanceof GetExpr) {
+                const get = expr as GetExpr;
+                return new SetExpr(get.object, get.name, value);
             }
             throw new ParseError(equals, "Invalid assignment target.");
         }
@@ -63,6 +66,9 @@ export class Parser {
         while(true) {
             if (this.match(TokenType.L_PAREN)) {
                 expr = this.finishCall(expr);
+            } else if (this.match(TokenType.DOT)) {
+                const name = this.consume(TokenType.IDENTIFIER, "Expect property name after '.'.");
+                expr = new GetExpr(expr, name);
             } else {
                 break;
             }
@@ -164,8 +170,20 @@ export class Parser {
         return statements;
     }
 
+    private classDeclaration(): Stmt {
+        const name = this.consume(TokenType.IDENTIFIER, "Expect class name.");
+        this.consume(TokenType.L_BRACE, "Expect '{' before class body.");
+        const methods: FunctionStmt[] = [];
+        while (!this.check(TokenType.R_BRACE) && !this.isAtEnd()) {
+            methods.push(this.functionStatement("method"));
+        }
+        this.consume(TokenType.R_BRACE, "Expect '}' after class body.");
+        return new ClassStmt(name, methods);
+    }
+
     private declaration(): Stmt {
         try {
+            if (this.match(TokenType.CLASS)) return this.classDeclaration();
             if (this.match(TokenType.FUN)) return this.functionStatement("function");
             if (this.match(TokenType.VAR)) return this.varDeclaration();
             return this.statement();
@@ -216,7 +234,7 @@ export class Parser {
         return body;
     }
 
-    private functionStatement(kind: string): Stmt {
+    private functionStatement(kind: string): FunctionStmt {
         const name = this.consume(TokenType.IDENTIFIER, `Expect ${kind} name.`);
         this.consume(TokenType.L_PAREN, `Expect ${kind} name.`);
         const parameters: Token[] = [];

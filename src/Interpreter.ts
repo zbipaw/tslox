@@ -1,8 +1,8 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr, GetExpr, SetExpr 
 } from "./gen/Expr";
 import { 
-    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt
+    Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt, ClassStmt
 } from "./gen/Stmt";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType";
@@ -12,6 +12,8 @@ import { Callable } from "./Callable";
 import { Function } from "./Function";
 import { Return } from "./Return";
 import { Nullable } from "./Types";
+import { Klass } from "./Klass";
+import { Instance } from "./Instance";
 
 export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<void> {
     globals: Environment = new Environment();
@@ -126,6 +128,14 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
         return func.call(this, args);
     }
 
+    visitGetExpr(expr: GetExpr) {
+        const object = this.evaluate(expr.object);
+        if (object instanceof Instance) {
+            return (object as Instance).get(expr.name);
+        }
+        throw new RuntimeError(expr.name, "Only instances have properties.");
+    }
+
     visitGroupingExpr(expr: GroupingExpr) {
         return this.evaluate(expr.expression);
     }
@@ -142,6 +152,16 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
             if (!this.isTruthy(left)) return left;
         }
         return this.evaluate(expr.right);
+    }
+
+    visitSetExpr(expr: SetExpr) {
+        const object = this.evaluate(expr.object);
+        if(!(object instanceof Instance)) {
+            throw new RuntimeError(expr.name, "Only instances have fields.");
+        }
+        const value = this.evaluate(expr.value);
+        (object as Instance).set(expr.name, value);
+        return value;
     }
 
     visitUnaryExpr(expr: UnaryExpr) {
@@ -162,6 +182,17 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
 
     visitBlockStmt(stmt: BlockStmt): void {
         this.executeBlock(stmt.statements, new Environment(this.environment));
+    }
+
+    visitClassStmt(stmt: ClassStmt): void {
+        this.environment.define(stmt.name.lexeme, null);
+        const methods = new Map<string, Function>();
+        for (let method of stmt.methods) {
+            const func = new Function(method, this.environment);
+            methods.set(method.name.lexeme, func);
+        }
+        const klass = new Klass(stmt.name.lexeme, methods);
+        this.environment.assign(stmt.name, klass);
     }
 
     visitExpressionStmt(stmt: ExpressionStmt): void {

@@ -5,9 +5,11 @@ export interface ExprVisitor<T> {
     visitAssignExpr: (expr: AssignExpr) => T;
     visitBinaryExpr: (expr: BinaryExpr) => T;
     visitCallExpr: (expr: CallExpr) => T;
+    visitGetExpr: (expr: GetExpr) => T;
     visitGroupingExpr: (expr: GroupingExpr) => T;
     visitLiteralExpr: (expr: LiteralExpr) => T;
     visitLogicalExpr: (expr: LogicalExpr) => T;
+    visitSetExpr: (expr: SetExpr) => T;
     visitUnaryExpr: (expr: UnaryExpr) => T;
     visitVariableExpr: (expr: VariableExpr) => T;
 }
@@ -29,6 +31,7 @@ export class AssignExpr implements Expr {
         return visitor.visitAssignExpr(this);
     }
 }
+
 export class BinaryExpr implements Expr {
     left: Expr;
     operator: Token;
@@ -44,6 +47,7 @@ export class BinaryExpr implements Expr {
         return visitor.visitBinaryExpr(this);
     }
 }
+
 export class CallExpr implements Expr {
     callee: Expr;
     paren: Token;
@@ -59,6 +63,21 @@ export class CallExpr implements Expr {
         return visitor.visitCallExpr(this);
     }
 }
+
+export class GetExpr implements Expr {
+    object: Expr;
+    name: Token;
+
+  constructor(object: Expr, name: Token) {
+    this.object = object;
+    this.name = name;
+    }
+
+    accept<T>(visitor: ExprVisitor<T>): T {
+        return visitor.visitGetExpr(this);
+    }
+}
+
 export class GroupingExpr implements Expr {
     expression: Expr;
 
@@ -70,6 +89,7 @@ export class GroupingExpr implements Expr {
         return visitor.visitGroupingExpr(this);
     }
 }
+
 export class LiteralExpr implements Expr {
     value: Nullable<Object>;
 
@@ -81,6 +101,7 @@ export class LiteralExpr implements Expr {
         return visitor.visitLiteralExpr(this);
     }
 }
+
 export class LogicalExpr implements Expr {
     left: Expr;
     operator: Token;
@@ -96,6 +117,23 @@ export class LogicalExpr implements Expr {
         return visitor.visitLogicalExpr(this);
     }
 }
+
+export class SetExpr implements Expr {
+    object: Expr;
+    name: Token;
+    value: Expr;
+
+  constructor(object: Expr, name: Token, value: Expr) {
+    this.object = object;
+    this.name = name;
+    this.value = value;
+    }
+
+    accept<T>(visitor: ExprVisitor<T>): T {
+        return visitor.visitSetExpr(this);
+    }
+}
+
 export class UnaryExpr implements Expr {
     operator: Token;
     right: Expr;
@@ -109,6 +147,7 @@ export class UnaryExpr implements Expr {
         return visitor.visitUnaryExpr(this);
     }
 }
+
 export class VariableExpr implements Expr {
     name: Token;
 
@@ -120,3 +159,4 @@ export class VariableExpr implements Expr {
         return visitor.visitVariableExpr(this);
     }
 }
+

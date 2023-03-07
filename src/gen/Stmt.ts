@@ -4,6 +4,7 @@ import { Nullable } from '../Types';
 
 export interface StmtVisitor<T> {
     visitBlockStmt: (stmt: BlockStmt) => T;
+    visitClassStmt: (stmt: ClassStmt) => T;
     visitExpressionStmt: (stmt: ExpressionStmt) => T;
     visitFunctionStmt: (stmt: FunctionStmt) => T;
     visitIfStmt: (stmt: IfStmt) => T;
@@ -28,6 +29,21 @@ export class BlockStmt implements Stmt {
         return visitor.visitBlockStmt(this);
     }
 }
+
+export class ClassStmt implements Stmt {
+    name: Token;
+    methods: FunctionStmt[];
+
+  constructor(name: Token, methods: FunctionStmt[]) {
+    this.name = name;
+    this.methods = methods;
+    }
+
+    accept<T>(visitor: StmtVisitor<T>): T {
+        return visitor.visitClassStmt(this);
+    }
+}
+
 export class ExpressionStmt implements Stmt {
     expression: Expr;
 
@@ -39,6 +55,7 @@ export class ExpressionStmt implements Stmt {
         return visitor.visitExpressionStmt(this);
     }
 }
+
 export class FunctionStmt implements Stmt {
     name: Token;
     params: Token[];
@@ -54,6 +71,7 @@ export class FunctionStmt implements Stmt {
         return visitor.visitFunctionStmt(this);
     }
 }
+
 export class IfStmt implements Stmt {
     condition: Expr;
     thenBranch: Stmt;
@@ -69,6 +87,7 @@ export class IfStmt implements Stmt {
         return visitor.visitIfStmt(this);
     }
 }
+
 export class PrintStmt implements Stmt {
     expression: Expr;
 
@@ -80,6 +99,7 @@ export class PrintStmt implements Stmt {
         return visitor.visitPrintStmt(this);
     }
 }
+
 export class ReturnStmt implements Stmt {
     keyword: Token;
     value: Nullable<Expr>;
@@ -93,6 +113,7 @@ export class ReturnStmt implements Stmt {
         return visitor.visitReturnStmt(this);
     }
 }
+
 export class VarStmt implements Stmt {
     name: Token;
     initializer: Nullable<Expr>;
@@ -106,6 +127,7 @@ export class VarStmt implements Stmt {
         return visitor.visitVarStmt(this);
     }
 }
+
 export class WhileStmt implements Stmt {
     condition: Expr;
     body: Stmt;
@@ -119,3 +141,4 @@ export class WhileStmt implements Stmt {
         return visitor.visitWhileStmt(this);
     }
 }
+

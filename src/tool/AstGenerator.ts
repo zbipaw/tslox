@@ -13,17 +13,21 @@ class AstGenerator {
             "Assign   - name: Token, value: Expr",
             "Binary   - left: Expr, operator: Token, right: Expr",
             "Call     - callee: Expr, paren: Token, args: Expr[]",
+            "Get      - object: Expr, name: Token",
             "Grouping - expression: Expr",
             "Literal  - value: Nullable<Object>",
             "Logical  - left: Expr, operator: Token, right: Expr",
+            "Set      - object: Expr, name: Token, value: Expr",
             "Unary    - operator: Token, right: Expr",
             "Variable - name: Token",
         ], [
             "import { Token } from '../Token';",
             "import { Nullable } from '../Types';"
         ]);
+
         this.defineAst(outputDir, "Stmt", [
             "Block      - statements: Stmt[]",
+            "Class      - name: Token, methods: FunctionStmt[]",
             "Expression - expression: Expr",
             "Function   - name: Token, params: Token[], body: Stmt[]",
             "If         - condition: Expr, thenBranch: Stmt, elseBranch: Nullable<Stmt>",
@@ -74,7 +78,7 @@ class AstGenerator {
         content += `    accept<T>(visitor: ${baseName}Visitor<T>): T {\n`;
         content += `        return visitor.visit${className}${baseName}(this);\n`;
         content += `    }\n`;
-        content += '}\n';
+        content += '}\n\n';
         return content;
     }
 

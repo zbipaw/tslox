@@ -1,10 +1,10 @@
 import { ResolveError } from "./Error";
-import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GroupingExpr, LiteralExpr, LogicalExpr, UnaryExpr, VariableExpr } from "./gen/Expr";
-import { BlockStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./gen/Stmt";
+import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GetExpr, GroupingExpr, LiteralExpr, LogicalExpr, SetExpr, UnaryExpr, VariableExpr } from "./gen/Expr";
+import { BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./gen/Stmt";
 import { Interpreter } from "./Interpreter";
 import { Token } from "./Token";
 
-enum FunctionType { NONE, FUNCTION };
+enum FunctionType { NONE, FUNCTION, METHOD };
 
 export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     private interpreter: Interpreter;
@@ -38,6 +38,15 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
         }
     }
 
+    visitClassStmt(stmt: ClassStmt): void {
+        this.declare(stmt.name);
+        this.define(stmt.name);
+        for (let method of stmt.methods) {
+            const declaration = FunctionType.METHOD;
+            this.resolveFunction(method, declaration);
+        }
+    }
+
     visitExpressionStmt(stmt: ExpressionStmt): void {
         this.resolveExpr(stmt.expression);
     }
@@ -52,6 +61,10 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
         this.declare(stmt.name);
         this.define(stmt.name);
         this.resolveFunction(stmt, FunctionType.FUNCTION);
+    }
+
+    visitGetExpr(expr: GetExpr): void {
+        this.resolveExpr(expr.object);
     }
 
     visitGroupingExpr(expr: GroupingExpr): void {
@@ -76,6 +89,11 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
         if (stmt.value != null) {
             this.resolveExpr(stmt.value);
         }
+    }
+
+    visitSetExpr(expr: SetExpr): void {
+        this.resolveExpr(expr.value);
+        this.resolveExpr(expr.object);
     }
 
     visitUnaryExpr(expr: UnaryExpr): void {
