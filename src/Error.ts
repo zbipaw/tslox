@@ -11,6 +11,17 @@ export class ParseError implements Error {
     }
 }
 
+export class ResolveError implements Error {
+    constructor(
+        public readonly token: Token,
+        public readonly message: string,
+        public readonly name: string = "Resolve error",
+    ) { }
+    public toString(): string {
+        return `${this.name}: ${this.message} @ ${this.token.line}`
+    }
+}
+
 export class RuntimeError implements Error {
     constructor(
         public readonly token: Token,

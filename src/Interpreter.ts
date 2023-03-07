@@ -15,6 +15,7 @@ import { Nullable } from "./Types";
 
 export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<void> {
     globals: Environment = new Environment();
+    locals: Map<Expr, number> = new Map();
     private environment = this.globals;
 
     constructor() {
@@ -52,10 +53,19 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
                 console.error(error.message);
         }
     }
+
+    resolve(expr: Expr, depth: number): void {
+        this.locals.set(expr, depth);
+    }
     
     visitAssignExpr(expr: AssignExpr) {
         const value = this.evaluate(expr.value);
-        this.environment.assign(expr.name, value);
+        const dist = this.locals.get(expr);
+        if (dist != null) {
+            this.environment.assignAt(dist, expr.name, value);
+        } else {
+            this.globals.assign(expr.name, value);
+        }
         return value;
     }
 
@@ -147,7 +157,7 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
     }
 
     visitVariableExpr(expr: VariableExpr) {
-        return this.environment.get(expr.name);
+        return this.lookupVariable(expr.name, expr);
     }
 
     visitBlockStmt(stmt: BlockStmt): void {
@@ -222,6 +232,15 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
 
     private isCallable(obj: any): boolean {
         return obj.call != undefined;
+    }
+
+    private lookupVariable(name: Token, expr: Expr): Nullable<Object> {
+        const dist = this.locals.get(expr);
+        if (dist != null) {
+            return this.environment.getAt(dist, name.lexeme);
+        } else {
+            return this.globals.get(name);
+        }
     }
 
     private stringify(lit: Object): string {
