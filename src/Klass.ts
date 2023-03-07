@@ -13,12 +13,18 @@ export class Klass implements Callable{
         this.methods = methods;
     }
 
-    arity(): number {
-        return 0;
+    arity(): Number {
+        const initializer = this.findMethod("init");
+        if (initializer == null) return 0;
+        return initializer.arity();
     }
 
     call(interpreter: Interpreter, args: Object[]): Instance {
         const instance = new Instance(this);
+        const initializer = this.findMethod("init");
+        if (initializer != null) {
+            initializer.bind(instance).call(interpreter, args);
+        }
         return instance;
     }
 

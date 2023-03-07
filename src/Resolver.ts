@@ -1,14 +1,16 @@
 import { ResolveError } from "./Error";
-import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GetExpr, GroupingExpr, LiteralExpr, LogicalExpr, SetExpr, UnaryExpr, VariableExpr } from "./gen/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GetExpr, GroupingExpr, LiteralExpr, LogicalExpr, SetExpr, ThisExpr, UnaryExpr, VariableExpr } from "./gen/Expr";
 import { BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./gen/Stmt";
 import { Interpreter } from "./Interpreter";
 import { Token } from "./Token";
 
-enum FunctionType { NONE, FUNCTION, METHOD };
+enum ClassType { NONE, CLASS };
+enum FunctionType { NONE, FUNCTION, INITIALIZER, METHOD };
 
 export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     private interpreter: Interpreter;
-    private scopes: Record<string, boolean>[] = [];
+    private scopes: Map<string, boolean>[] = [];
+    private currentClass: ClassType = ClassType.NONE;
     private currentFunc: FunctionType = FunctionType.NONE;
 
     constructor(interpreter: Interpreter) {
@@ -39,12 +41,21 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     }
 
     visitClassStmt(stmt: ClassStmt): void {
+        const enclosingClass = this.currentClass;
+        this.currentClass = ClassType.CLASS;
         this.declare(stmt.name);
         this.define(stmt.name);
+        this.beginScope();
+        this.scopes[this.scopes.length - 1].set("this", true);
         for (let method of stmt.methods) {
-            const declaration = FunctionType.METHOD;
+            let declaration = FunctionType.METHOD;
+            if (method.name.lexeme === "init") {
+                declaration = FunctionType.INITIALIZER;
+            }
             this.resolveFunction(method, declaration);
         }
+        this.endScope();
+        this.currentClass = enclosingClass;
     }
 
     visitExpressionStmt(stmt: ExpressionStmt): void {
@@ -87,6 +98,9 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
             throw new ResolveError(stmt.keyword, "Can't return from top-level code.");
         }
         if (stmt.value != null) {
+            if (this.currentFunc == FunctionType.INITIALIZER) {
+                throw new ResolveError(stmt.keyword, "Can't return a value from an initializer.");
+            }
             this.resolveExpr(stmt.value);
         }
     }
@@ -94,6 +108,13 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     visitSetExpr(expr: SetExpr): void {
         this.resolveExpr(expr.value);
         this.resolveExpr(expr.object);
+    }
+
+    visitThisExpr(expr: ThisExpr): void {
+        if (this.currentClass == ClassType.NONE) {
+            throw new ResolveError(expr.keyword, "Can't use 'this' outside of a class.");
+        }
+        this.resolveLocal(expr, expr.keyword);
     }
 
     visitUnaryExpr(expr: UnaryExpr): void {
@@ -109,7 +130,7 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     }
 
     visitVariableExpr(expr: VariableExpr): void {
-        if (this.scopes.length && this.scopes.at(-1)?.[expr.name.lexeme] == false) {
+        if (this.scopes.length && this.scopes.at(-1)?.get(expr.name.lexeme) == false) {
             throw new ResolveError(expr.name, "Can't read local variable in its own initializer.");
         }
         this.resolveLocal(expr, expr.name);
@@ -123,20 +144,20 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     private declare(name: Token): void {
         if (!this.scopes.length) return;
         const scope = this.scopes.at(-1);
-        if (Object.keys(scope as Record<string, boolean>).includes(name.lexeme)){
+        if (scope?.has(name.lexeme)){
             throw new ResolveError(name, "Already a variable with this name in this scope.");
         }
-        if (scope) scope[name.lexeme] = false;
+        if (scope) scope.set(name.lexeme, false);
     }
 
     private define(name: Token): void {
         if (!this.scopes.length) return;
         const scope = this.scopes.at(-1);
-        if (scope) scope[name.lexeme] = true;
+        if (scope) scope.set(name.lexeme, true);
     }
 
     private beginScope(): void {
-        this.scopes.push({});
+        this.scopes.push(new Map());
     }
     
     private endScope(): void {

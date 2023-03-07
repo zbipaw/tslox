@@ -1,5 +1,5 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr, GetExpr, SetExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr, GetExpr, SetExpr, ThisExpr 
 } from "./gen/Expr";
 import { 
     Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt, ClassStmt
@@ -164,6 +164,10 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
         return value;
     }
 
+    visitThisExpr(expr: ThisExpr) {
+        return this.lookupVariable(expr.keyword, expr);
+    }
+
     visitUnaryExpr(expr: UnaryExpr) {
         const right = this.evaluate(expr.right);
         switch (expr.operator.type) {
@@ -188,7 +192,8 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
         this.environment.define(stmt.name.lexeme, null);
         const methods = new Map<string, Function>();
         for (let method of stmt.methods) {
-            const func = new Function(method, this.environment);
+            const isInitializer = method.name.lexeme === "init";
+            const func = new Function(method, this.environment, isInitializer);
             methods.set(method.name.lexeme, func);
         }
         const klass = new Klass(stmt.name.lexeme, methods);
@@ -200,7 +205,7 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
-        const func: Function = new Function(stmt, this.environment);
+        const func: Function = new Function(stmt, this.environment, false);
         this.environment.define(stmt.name.lexeme, func);
     }
 

@@ -1,5 +1,5 @@
 import { 
-    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr, CallExpr, GetExpr, SetExpr 
+    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr, CallExpr, GetExpr, SetExpr, ThisExpr 
 } from "./gen/Expr";
 import { 
     Stmt, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt, ClassStmt 
@@ -141,6 +141,7 @@ export class Parser {
         if (this.match(TokenType.NUMBER, TokenType.STRING)) {
             return new LiteralExpr(this.previous().literal ?? null);
         }
+        if (this.match(TokenType.THIS)) return new ThisExpr(this.previous());
         if (this.match(TokenType.IDENTIFIER)) {
             return new VariableExpr(this.previous());
         }
