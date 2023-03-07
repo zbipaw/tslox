@@ -1,6 +1,7 @@
 import { ScanError } from "./Error";
 import { Token } from "./Token";
 import { TokenType } from "./TokenType"
+import { Nullable } from "./Types";
 
 const keywords: Map<string, TokenType> = new Map([
     ['and', TokenType.AND],
@@ -112,7 +113,7 @@ export class Scanner {
         }
     }
 
-    private addToken(type: TokenType, literal: Object | null = null): Token[] {
+    private addToken(type: TokenType, literal: Nullable<Object> = null): Token[] {
         const value = this.source.substring(this.start, this.current);
         this.tokens.push(new Token(type, value, literal, this.line));
         return this.tokens;
@@ -140,6 +141,14 @@ export class Scanner {
         }
     }
 
+    private identifier(): void {
+        while (this.isAlphaNumeric(this.peek())) this.advance();
+        const value = this.source.substring(this.start, this.current);
+        let type = keywords.get(value)
+        if (type == null) type = TokenType.IDENTIFIER;
+        this.addToken(type)
+    }
+
     private isAtEnd(): boolean {
         return this.current >= this.source.length;
     }
@@ -165,6 +174,15 @@ export class Scanner {
         return true;
     }
 
+    private number(): void { 
+        while (this.isDigit(this.peek())) this.advance();
+        if (this.peek() == "." && this.isDigit(this.peekNext())) {
+            this.advance();
+            while (this.isDigit(this.peek())) this.advance();
+        }
+        this.addToken(TokenType.NUMBER, Number.parseFloat(this.source.substring(this.start, this.current)))
+    }
+
     private peek(): string {
         if (this.isAtEnd()) return "\0";
         return this.source.charAt(this.current);
@@ -173,23 +191,6 @@ export class Scanner {
     private peekNext(): string {
         if (this.current + 1 >= this.source.length) return "\0";
         return this.source.charAt(this.current);
-    }
-
-    private identifier(): void {
-        while (this.isAlphaNumeric(this.peek())) this.advance();
-        const value = this.source.substring(this.start, this.current);
-        let type = keywords.get(value)
-        if (type == null) type = TokenType.IDENTIFIER;
-        this.addToken(type)
-    }
-
-    private number(): void { 
-        while (this.isDigit(this.peek())) this.advance();
-        if (this.peek() == "." && this.isDigit(this.peekNext())) {
-            this.advance();
-            while (this.isDigit(this.peek())) this.advance();
-        }
-        this.addToken(TokenType.NUMBER, Number.parseFloat(this.source.substring(this.start, this.current)))
     }
 
     private string(): void {

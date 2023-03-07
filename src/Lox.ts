@@ -39,7 +39,7 @@ export class Lox {
         rl.on("line", (input) => {
             this.hadError = false;
             input = input.trim()
-            if (input === "exit") {
+            if (input == "exit") {
                 rl.close()
             }
             if (input) {

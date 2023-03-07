@@ -1,4 +1,5 @@
 import { Token } from '../Token';
+import { Nullable } from '../Types';
 
 export interface ExprVisitor<T> {
     visitAssignExpr: (expr: AssignExpr) => T;
@@ -70,9 +71,9 @@ export class GroupingExpr implements Expr {
     }
 }
 export class LiteralExpr implements Expr {
-    value: Object | null;
+    value: Nullable<Object>;
 
-  constructor(value: Object | null) {
+  constructor(value: Nullable<Object>) {
     this.value = value;
     }
 

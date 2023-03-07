@@ -14,25 +14,27 @@ class AstGenerator {
             "Binary   - left: Expr, operator: Token, right: Expr",
             "Call     - callee: Expr, paren: Token, args: Expr[]",
             "Grouping - expression: Expr",
-            "Literal  - value: Object | null",
+            "Literal  - value: Nullable<Object>",
             "Logical  - left: Expr, operator: Token, right: Expr",
             "Unary    - operator: Token, right: Expr",
             "Variable - name: Token",
         ], [
-            "import { Token } from '../Token';"
+            "import { Token } from '../Token';",
+            "import { Nullable } from '../Types';"
         ]);
         this.defineAst(outputDir, "Stmt", [
             "Block      - statements: Stmt[]",
             "Expression - expression: Expr",
             "Function   - name: Token, params: Token[], body: Stmt[]",
-            "If         - condition: Expr, thenBranch: Stmt, elseBranch: Stmt | null",
+            "If         - condition: Expr, thenBranch: Stmt, elseBranch: Nullable<Stmt>",
             "Print      - expression: Expr",
-            "Return     - keyword: Token, value: Expr | null",
-            "Var        - name: Token, initializer: Expr | null",
+            "Return     - keyword: Token, value: Nullable<Expr>",
+            "Var        - name: Token, initializer: Nullable<Expr>",
             "While      - condition: Expr, body: Stmt",
         ], [
             "import { Expr } from './Expr';",
-            "import { Token } from '../Token';"
+            "import { Token } from '../Token';",
+            "import { Nullable } from '../Types';"
         ]);
     }
 
@@ -47,16 +49,6 @@ class AstGenerator {
             content += this.defineType(baseName, className, fields)
         });
         writeFileSync(path, content, {flag:'w+'});
-    }
-
-    private static defineVisitor(baseName: string, types: string[]): string {
-        let content = `export interface ${baseName}Visitor<T> {\n`;
-        types.forEach(type => {
-            const typeName = type.split("-")[0].trim();
-            content += `    visit${typeName}${baseName}: (${baseName.toLowerCase()}: ${typeName}${baseName}) => T;\n`;
-        });
-        content += '}\n\n';
-        return content;
     }
 
     private static defineAbstract(baseName: string): string {
@@ -83,6 +75,16 @@ class AstGenerator {
         content += `        return visitor.visit${className}${baseName}(this);\n`;
         content += `    }\n`;
         content += '}\n';
+        return content;
+    }
+
+    private static defineVisitor(baseName: string, types: string[]): string {
+        let content = `export interface ${baseName}Visitor<T> {\n`;
+        types.forEach(type => {
+            const typeName = type.split("-")[0].trim();
+            content += `    visit${typeName}${baseName}: (${baseName.toLowerCase()}: ${typeName}${baseName}) => T;\n`;
+        });
+        content += '}\n\n';
         return content;
     }
 }

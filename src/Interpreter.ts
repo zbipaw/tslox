@@ -11,8 +11,9 @@ import { Environment } from "./Environment";
 import { Callable } from "./Callable";
 import { Function } from "./Function";
 import { Return } from "./Return";
+import { Nullable } from "./Types";
 
-export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void> {
+export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<void> {
     globals: Environment = new Environment();
     private environment = this.globals;
 
@@ -25,6 +26,22 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         this.globals.define("clock", clock);
     }
 
+    execute(stmt: Stmt): void {
+        return stmt.accept(this);
+    }
+
+    executeBlock(statements: Stmt[], environment: Environment): void {
+        const previous = this.environment;
+        try {
+            this.environment = environment;
+            for (let stmt of statements) {
+                this.execute(stmt);
+            }
+        } finally {
+            this.environment = previous;
+        }
+    }
+
     interpret(statements: Stmt[]): void {
         try {
             for(let stmt of statements) {
@@ -35,36 +52,22 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
                 console.error(error.message);
         }
     }
-
-    visitLiteralExpr(expr: LiteralExpr) {
-        return expr.value;
-    }
-
-    visitGroupingExpr(expr: GroupingExpr) {
-        return this.evaluate(expr.expression);
-    }
-
-    visitUnaryExpr(expr: UnaryExpr) {
-        const right = this.evaluate(expr.right);
-        switch (expr.operator.type) {
-            case TokenType.BANG:
-                return !this.isTruthy(right);
-            case TokenType.MINUS:
-                this.checkNumberOperand(expr.operator, right);
-                return -Number(right);
-        }
-        throw new RuntimeError(expr.operator, "Unknown token type used as unary operator.")
-    }
     
+    visitAssignExpr(expr: AssignExpr) {
+        const value = this.evaluate(expr.value);
+        this.environment.assign(expr.name, value);
+        return value;
+    }
+
     visitBinaryExpr(expr: BinaryExpr) {
         const left = this.evaluate(expr.left);
         const right = this.evaluate(expr.right);
         switch (expr.operator.type) {
             case TokenType.PLUS:
-                if (typeof left === "number" && typeof right === "number") {
+                if (typeof left == "number" && typeof right == "number") {
                     return left + right;
                 }
-                if (typeof left === "string" && typeof right === "string") {
+                if (typeof left == "string" && typeof right == "string") {
                     return `${left}${right}`;
                 }
                 throw new RuntimeError(expr.operator, "Operands must be 2 numbers or string.")
@@ -95,26 +98,6 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         throw new RuntimeError(expr.operator, "Unknown token type used as binary operator.")
     }
 
-    visitVariableExpr(expr: VariableExpr) {
-        return this.environment.get(expr.name);
-    }
-
-    visitAssignExpr(expr: AssignExpr) {
-        const value = this.evaluate(expr.value);
-        this.environment.assign(expr.name, value);
-        return value;
-    }
-
-    visitLogicalExpr(expr: LogicalExpr) {
-        const left = this.evaluate(expr.left);
-        if (expr.operator.type === TokenType.OR) {
-            if (this.isTruthy(left)) return left;
-        } else {
-            if (!this.isTruthy(left)) return left;
-        }
-        return this.evaluate(expr.right);
-    }
-
     visitCallExpr(expr: CallExpr) {
         const callee = this.evaluate(expr.callee);
         const args: Expr[] = [];
@@ -133,6 +116,40 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         return func.call(this, args);
     }
 
+    visitGroupingExpr(expr: GroupingExpr) {
+        return this.evaluate(expr.expression);
+    }
+
+    visitLiteralExpr(expr: LiteralExpr) {
+        return expr.value;
+    }
+
+    visitLogicalExpr(expr: LogicalExpr) {
+        const left = this.evaluate(expr.left);
+        if (expr.operator.type == TokenType.OR) {
+            if (this.isTruthy(left)) return left;
+        } else {
+            if (!this.isTruthy(left)) return left;
+        }
+        return this.evaluate(expr.right);
+    }
+
+    visitUnaryExpr(expr: UnaryExpr) {
+        const right = this.evaluate(expr.right);
+        switch (expr.operator.type) {
+            case TokenType.BANG:
+                return !this.isTruthy(right);
+            case TokenType.MINUS:
+                this.checkNumberOperand(expr.operator, right);
+                return -Number(right);
+        }
+        throw new RuntimeError(expr.operator, "Unknown token type used as unary operator.")
+    }
+
+    visitVariableExpr(expr: VariableExpr) {
+        return this.environment.get(expr.name);
+    }
+
     visitBlockStmt(stmt: BlockStmt): void {
         this.executeBlock(stmt.statements, new Environment(this.environment));
     }
@@ -149,7 +166,7 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
     visitIfStmt(stmt: IfStmt): void {
         if (this.isTruthy(this.evaluate(stmt.condition))) {
             this.execute(stmt.thenBranch);
-        } else if (stmt.elseBranch !== null) {
+        } else if (stmt.elseBranch != null) {
             this.execute(stmt.elseBranch);
         }
     }
@@ -161,7 +178,7 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
 
     visitReturnStmt(stmt: ReturnStmt): void {
         let value = null;
-        if (stmt.value !== null) {
+        if (stmt.value != null) {
             value = this.evaluate(stmt.value);
         }
         throw new Return(value);    //control flow
@@ -181,20 +198,14 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
         }
     }
 
-    execute(stmt: Stmt): void {
-        return stmt.accept(this);
+    private checkNumberOperand(operator: Token, operand: Object): void {
+        if (typeof operand == "number") return;
+        throw new RuntimeError(operator, "Operand must be a number.")
     }
 
-    executeBlock(statements: Stmt[], environment: Environment): void {
-        const previous = this.environment;
-        try {
-            this.environment = environment;
-            for (let stmt of statements) {
-                this.execute(stmt);
-            }
-        } finally {
-            this.environment = previous;
-        }
+    private checkNumberOperands(operator: Token, left: Object, right: Object): void {
+        if (typeof left == "number" && typeof right == "number") return;
+        throw new RuntimeError(operator, "Operand must be a numbers.")
     }
 
     private evaluate(expr: Expr): any {
@@ -206,26 +217,16 @@ export class Interpreter implements ExprVisitor<Object | null>, StmtVisitor<void
     }
 
     private isEqual(a: Object, b: Object): boolean {
-        return a === b;
+        return a == b;
     }
 
     private isCallable(obj: any): boolean {
-        return obj.call !== undefined;
-    }
-
-    private checkNumberOperand(operator: Token, operand: Object): void {
-        if (typeof operand === "number") return;
-        throw new RuntimeError(operator, "Operand must be a number.")
-    }
-
-    private checkNumberOperands(operator: Token, left: Object, right: Object): void {
-        if (typeof left === "number" && typeof right === "number") return;
-        throw new RuntimeError(operator, "Operand must be a numbers.")
+        return obj.call != undefined;
     }
 
     private stringify(lit: Object): string {
-        if (lit === null) return "nil";
-        if (typeof lit === "number") {
+        if (lit == null) return "nil";
+        if (typeof lit == "number") {
             let text = lit.toString();
             if (text.endsWith(".0")) {
                 text = text.substring(0, text.length - 2);

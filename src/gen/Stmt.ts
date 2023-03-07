@@ -1,5 +1,6 @@
 import { Expr } from './Expr';
 import { Token } from '../Token';
+import { Nullable } from '../Types';
 
 export interface StmtVisitor<T> {
     visitBlockStmt: (stmt: BlockStmt) => T;
@@ -56,9 +57,9 @@ export class FunctionStmt implements Stmt {
 export class IfStmt implements Stmt {
     condition: Expr;
     thenBranch: Stmt;
-    elseBranch: Stmt | null;
+    elseBranch: Nullable<Stmt>;
 
-  constructor(condition: Expr, thenBranch: Stmt, elseBranch: Stmt | null) {
+  constructor(condition: Expr, thenBranch: Stmt, elseBranch: Nullable<Stmt>) {
     this.condition = condition;
     this.thenBranch = thenBranch;
     this.elseBranch = elseBranch;
@@ -81,9 +82,9 @@ export class PrintStmt implements Stmt {
 }
 export class ReturnStmt implements Stmt {
     keyword: Token;
-    value: Expr | null;
+    value: Nullable<Expr>;
 
-  constructor(keyword: Token, value: Expr | null) {
+  constructor(keyword: Token, value: Nullable<Expr>) {
     this.keyword = keyword;
     this.value = value;
     }
@@ -94,9 +95,9 @@ export class ReturnStmt implements Stmt {
 }
 export class VarStmt implements Stmt {
     name: Token;
-    initializer: Expr | null;
+    initializer: Nullable<Expr>;
 
-  constructor(name: Token, initializer: Expr | null) {
+  constructor(name: Token, initializer: Nullable<Expr>) {
     this.name = name;
     this.initializer = initializer;
     }

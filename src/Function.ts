@@ -4,6 +4,7 @@ import { Environment } from "./Environment";
 import { FunctionStmt } from "./gen/Stmt";
 import { Interpreter } from "./Interpreter";
 import { Return } from "./Return";
+import { Nullable } from "./Types";
 
 export class Function implements Callable {
     private declaration: FunctionStmt;
@@ -14,11 +15,11 @@ export class Function implements Callable {
         this.closure = closure;
     }
 
-    arity() {
+    arity(): Number {
         return this.declaration.params.length;
     }
 
-    call(interpreter: Interpreter, args: Object[]): Object | null {
+    call(interpreter: Interpreter, args: Object[]): Nullable<Object> {
         const environment: Environment = new Environment(this.closure);
         for (let i = 0; i < this.declaration.params.length; i++) {
             environment.define(
