@@ -32,10 +32,12 @@ export class BlockStmt implements Stmt {
 
 export class ClassStmt implements Stmt {
     name: Token;
+    superklass: VariableExpr;
     methods: FunctionStmt[];
 
-  constructor(name: Token, methods: FunctionStmt[]) {
+  constructor(name: Token, superklass: VariableExpr, methods: FunctionStmt[]) {
     this.name = name;
+    this.superklass = superklass;
     this.methods = methods;
     }
 

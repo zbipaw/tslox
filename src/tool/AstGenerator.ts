@@ -18,6 +18,7 @@ class AstGenerator {
             "Literal  - value: Nullable<Object>",
             "Logical  - left: Expr, operator: Token, right: Expr",
             "Set      - object: Expr, name: Token, value: Expr",
+            "Super    - keyword: Token, method: Token",
             "This     - keyword: Token",
             "Unary    - operator: Token, right: Expr",
             "Variable - name: Token",
@@ -28,7 +29,8 @@ class AstGenerator {
 
         this.defineAst(outputDir, "Stmt", [
             "Block      - statements: Stmt[]",
-            "Class      - name: Token, methods: FunctionStmt[]",
+            "Class      - name: Token, superklass: VariableExpr," + 
+                        " methods: FunctionStmt[]",
             "Expression - expression: Expr",
             "Function   - name: Token, params: Token[], body: Stmt[]",
             "If         - condition: Expr, thenBranch: Stmt, elseBranch: Nullable<Stmt>",

@@ -1,10 +1,10 @@
 import { ResolveError } from "./Error";
-import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GetExpr, GroupingExpr, LiteralExpr, LogicalExpr, SetExpr, ThisExpr, UnaryExpr, VariableExpr } from "./gen/Expr";
+import { AssignExpr, BinaryExpr, CallExpr, Expr, ExprVisitor, GetExpr, GroupingExpr, LiteralExpr, LogicalExpr, SetExpr, SuperExpr, ThisExpr, UnaryExpr, VariableExpr } from "./gen/Expr";
 import { BlockStmt, ClassStmt, ExpressionStmt, FunctionStmt, IfStmt, PrintStmt, ReturnStmt, Stmt, StmtVisitor, VarStmt, WhileStmt } from "./gen/Stmt";
 import { Interpreter } from "./Interpreter";
 import { Token } from "./Token";
 
-enum ClassType { NONE, CLASS };
+enum ClassType { NONE, CLASS, SUBCLASS };
 enum FunctionType { NONE, FUNCTION, INITIALIZER, METHOD };
 
 export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
@@ -45,6 +45,18 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
         this.currentClass = ClassType.CLASS;
         this.declare(stmt.name);
         this.define(stmt.name);
+        if (stmt.superklass !== null &&
+            stmt.name.lexeme === stmt.superklass.name.lexeme) {
+            throw new ResolveError(stmt.superklass.name, "A class can't inherit from itself.");
+        }
+        if (stmt.superklass !== null) {
+            this.currentClass = ClassType.SUBCLASS;
+            this.resolveExpr(stmt.superklass);
+        }
+        if (stmt.superklass !== null) {
+            this.beginScope();
+            this.scopes[this.scopes.length - 1].set("super", true);
+        }
         this.beginScope();
         this.scopes[this.scopes.length - 1].set("this", true);
         for (let method of stmt.methods) {
@@ -55,6 +67,7 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
             this.resolveFunction(method, declaration);
         }
         this.endScope();
+        if (stmt.superklass !== null) this.endScope();
         this.currentClass = enclosingClass;
     }
 
@@ -65,7 +78,7 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     visitIfStmt(stmt: IfStmt): void {
         this.resolveExpr(stmt.condition);
         this.resolveStmt(stmt.thenBranch);
-        if(stmt.elseBranch != null) this.resolveStmt(stmt.elseBranch);
+        if(stmt.elseBranch !== null) this.resolveStmt(stmt.elseBranch);
     }
 
     visitFunctionStmt(stmt: FunctionStmt): void {
@@ -97,7 +110,7 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
         if (this.currentFunc == FunctionType.NONE) {
             throw new ResolveError(stmt.keyword, "Can't return from top-level code.");
         }
-        if (stmt.value != null) {
+        if (stmt.value !== null) {
             if (this.currentFunc == FunctionType.INITIALIZER) {
                 throw new ResolveError(stmt.keyword, "Can't return a value from an initializer.");
             }
@@ -108,6 +121,15 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
     visitSetExpr(expr: SetExpr): void {
         this.resolveExpr(expr.value);
         this.resolveExpr(expr.object);
+    }
+
+    visitSuperExpr(expr: SuperExpr) {
+        if (this.currentClass == ClassType.NONE) {
+            throw new ResolveError(expr.keyword, "Can't use 'super' outside of a class.");
+        } else if (this.currentClass != ClassType.SUBCLASS){
+            throw new ResolveError(expr.keyword, "Can't use 'super' in a class with no superclass.");
+        }
+        this.resolveLocal(expr, expr.keyword);
     }
 
     visitThisExpr(expr: ThisExpr): void {
@@ -123,7 +145,7 @@ export class Resolver implements ExprVisitor<void>, StmtVisitor<void> {
 
     visitVarStmt(stmt: VarStmt): void {
         this.declare(stmt.name);
-        if (stmt.initializer != null) {
+        if (stmt.initializer !== null) {
             this.resolveExpr(stmt.initializer);
         }
         this.define(stmt.name);

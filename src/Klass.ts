@@ -6,16 +6,18 @@ import { Nullable } from "./Types";
 
 export class Klass implements Callable{
     name: string;
+    superklass: Klass;
     methods: Map<string, Function> = new Map();
 
-    constructor(name: string, methods: Map<string, Function>) {
+    constructor(name: string, superklass: Klass, methods: Map<string, Function>) {
         this.name = name;
+        this.superklass = superklass;
         this.methods = methods;
     }
 
     arity(): Number {
         const initializer = this.findMethod("init");
-        if (initializer == null) return 0;
+        if (initializer === null) return 0;
         return initializer.arity();
     }
 
@@ -31,6 +33,9 @@ export class Klass implements Callable{
     findMethod(name: string): Nullable<Function> {
         if (this.methods.has(name)) {
             return this.methods.get(name) as Function;
+        }
+        if (this.superklass !== null) {
+            return this.superklass.findMethod(name);
         }
         return null;
     }

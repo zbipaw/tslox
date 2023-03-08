@@ -23,7 +23,7 @@ export class Environment {
             this.values.set(name.lexeme, value);
             return;
         }
-        if (this.enclosing != null) {
+        if (this.enclosing !== null) {
             this.enclosing.assign(name, value);
             return;
         }
@@ -42,7 +42,7 @@ export class Environment {
         if (this.values.has(name.lexeme)) {
             return this.values.get(name.lexeme) ?? null;
         }
-        if (this.enclosing != null) return this.enclosing.get(name);
+        if (this.enclosing !== null) return this.enclosing.get(name);
         throw new RuntimeError(name, `Undefined variable '${name.lexeme}'.`);
     }
 

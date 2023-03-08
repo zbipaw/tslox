@@ -1,5 +1,5 @@
 import { 
-    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr, GetExpr, SetExpr, ThisExpr 
+    Expr, ExprVisitor, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, AssignExpr, LogicalExpr, CallExpr, GetExpr, SetExpr, ThisExpr, SuperExpr 
 } from "./gen/Expr";
 import { 
     Stmt, StmtVisitor, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt, ClassStmt
@@ -164,6 +164,17 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
         return value;
     }
 
+    visitSuperExpr(expr: SuperExpr) {
+        const dist = this.locals.get(expr) as number;
+        const superklass = this.environment.getAt(dist, "super") as Klass;
+        const object = this.environment.getAt(dist - 1, "this") as Instance;
+        const method = superklass.findMethod(expr.method.lexeme);
+        if (method === null) {
+            throw new RuntimeError(expr.method, `Undefined property ' + ${expr.method.lexeme} + '.`);
+        }
+        return method.bind(object);
+    }
+
     visitThisExpr(expr: ThisExpr) {
         return this.lookupVariable(expr.keyword, expr);
     }
@@ -177,7 +188,7 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
                 this.checkNumberOperand(expr.operator, right);
                 return -Number(right);
         }
-        throw new RuntimeError(expr.operator, "Unknown token type used as unary operator.")
+        throw new RuntimeError(expr.operator, "Unknown token type used as unary operator.");
     }
 
     visitVariableExpr(expr: VariableExpr) {
@@ -189,14 +200,28 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
     }
 
     visitClassStmt(stmt: ClassStmt): void {
+        let superklass = null;
+        if (stmt.superklass !== null) {
+            superklass = this.evaluate(stmt.superklass);
+            if (!(superklass instanceof Klass)) {
+                throw new RuntimeError(stmt.superklass.name, "Superclass must be a class.");
+            }
+        }
         this.environment.define(stmt.name.lexeme, null);
+        if (stmt.superklass != null) {
+            const environment = new Environment(this.environment);
+            environment.define("super", superklass);
+        }
         const methods = new Map<string, Function>();
         for (let method of stmt.methods) {
             const isInitializer = method.name.lexeme === "init";
             const func = new Function(method, this.environment, isInitializer);
             methods.set(method.name.lexeme, func);
         }
-        const klass = new Klass(stmt.name.lexeme, methods);
+        const klass = new Klass(stmt.name.lexeme, superklass as Klass, methods);
+        if (superklass !== null && this.environment.enclosing !== null) {
+            this.environment = this.environment.enclosing;
+        }
         this.environment.assign(stmt.name, klass);
     }
 
@@ -224,7 +249,7 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
 
     visitReturnStmt(stmt: ReturnStmt): void {
         let value = null;
-        if (stmt.value != null) {
+        if (stmt.value !== null) {
             value = this.evaluate(stmt.value);
         }
         throw new Return(value);    //control flow
@@ -280,7 +305,7 @@ export class Interpreter implements ExprVisitor<Nullable<Object>>, StmtVisitor<v
     }
 
     private stringify(lit: Object): string {
-        if (lit == null) return "nil";
+        if (lit === null) return "nil";
         if (typeof lit == "number") {
             let text = lit.toString();
             if (text.endsWith(".0")) {

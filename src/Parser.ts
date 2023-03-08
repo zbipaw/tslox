@@ -1,5 +1,5 @@
 import { 
-    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr, CallExpr, GetExpr, SetExpr, ThisExpr 
+    Expr, AssignExpr, BinaryExpr, UnaryExpr, LiteralExpr, GroupingExpr, VariableExpr, LogicalExpr, CallExpr, GetExpr, SetExpr, ThisExpr, SuperExpr 
 } from "./gen/Expr";
 import { 
     Stmt, ExpressionStmt, PrintStmt, VarStmt, BlockStmt, IfStmt, WhileStmt, FunctionStmt, ReturnStmt, ClassStmt 
@@ -141,6 +141,12 @@ export class Parser {
         if (this.match(TokenType.NUMBER, TokenType.STRING)) {
             return new LiteralExpr(this.previous().literal ?? null);
         }
+        if (this.match(TokenType.SUPER)) {
+            const keyword = this.previous();
+            this.consume(TokenType.DOT, "Expect '.' after 'super'.");
+            const method = this.consume(TokenType.IDENTIFIER, "Expect superclass method name.");
+            return new SuperExpr(keyword, method);
+        }
         if (this.match(TokenType.THIS)) return new ThisExpr(this.previous());
         if (this.match(TokenType.IDENTIFIER)) {
             return new VariableExpr(this.previous());
@@ -173,13 +179,18 @@ export class Parser {
 
     private classDeclaration(): Stmt {
         const name = this.consume(TokenType.IDENTIFIER, "Expect class name.");
+        let superklass = null;
+        if (this.match(TokenType.LESS)) {
+            this.consume(TokenType.IDENTIFIER, "Expect superclass name.");
+            superklass = new VariableExpr(this.previous());
+        }
         this.consume(TokenType.L_BRACE, "Expect '{' before class body.");
         const methods: FunctionStmt[] = [];
         while (!this.check(TokenType.R_BRACE) && !this.isAtEnd()) {
             methods.push(this.functionStatement("method"));
         }
         this.consume(TokenType.R_BRACE, "Expect '}' after class body.");
-        return new ClassStmt(name, methods);
+        return new ClassStmt(name, superklass, methods);
     }
 
     private declaration(): Stmt {
@@ -222,14 +233,14 @@ export class Parser {
         this.consume(TokenType.R_PAREN, "Expect ')' after for clauses.");
         let body = this.statement();
 
-        if (increment != null) {
+        if (increment !== null) {
             body = new BlockStmt([
                 body, new ExpressionStmt(increment)
             ])
         }
-        if (condition == null) condition = new LiteralExpr(true);
+        if (condition === null) condition = new LiteralExpr(true);
         body = new WhileStmt(condition, body);
-        if (initializer != null) {
+        if (initializer !== null) {
             body = new BlockStmt([initializer, body])
         }
         return body;

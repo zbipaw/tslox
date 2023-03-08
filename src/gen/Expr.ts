@@ -10,6 +10,7 @@ export interface ExprVisitor<T> {
     visitLiteralExpr: (expr: LiteralExpr) => T;
     visitLogicalExpr: (expr: LogicalExpr) => T;
     visitSetExpr: (expr: SetExpr) => T;
+    visitSuperExpr: (expr: SuperExpr) => T;
     visitThisExpr: (expr: ThisExpr) => T;
     visitUnaryExpr: (expr: UnaryExpr) => T;
     visitVariableExpr: (expr: VariableExpr) => T;
@@ -132,6 +133,20 @@ export class SetExpr implements Expr {
 
     accept<T>(visitor: ExprVisitor<T>): T {
         return visitor.visitSetExpr(this);
+    }
+}
+
+export class SuperExpr implements Expr {
+    keyword: Token;
+    method: Token;
+
+  constructor(keyword: Token, method: Token) {
+    this.keyword = keyword;
+    this.method = method;
+    }
+
+    accept<T>(visitor: ExprVisitor<T>): T {
+        return visitor.visitSuperExpr(this);
     }
 }
 
